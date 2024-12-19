@@ -1,0 +1,1155 @@
+---
+title: "Conodont Permian/Triassic"
+author: "Pauline Guenser"
+date: "`r Sys.Date()`"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_knit$set(root.dir="C:/Users/33677/Documents/NEW_WORK/THESE/Permian-Triassic_assembly process/Rmarkdown outputs")
+```
+
+## Introduction
+
+This is an R Markdown document which synthesizes the analyses performed in Guenser et al. (in prep.) on the database of global Permian/Triassic conodont occurrences.
+The database was built through a compilation of the literature (253 articles) published between 1967 and 2022 included. The data represent occurrences of conodont species within a sample from a section located with GPS coordinates. The studied time period spans from the Changhsingian (Upper Permian) to the Spathian (Lower Triassic, Olenekian). The time resolution is at stage level for the Permian (i.e., Changhsingian) and sub-stage level for the Lower Triassic (i.e., Griesbachian, Dienerian, Smithian and Spathian).
+
+First, we load required packages and the database.
+
+```{r, message=FALSE, warning=FALSE}
+library(dplyr)
+library(tidyr)
+library(tibble)
+library(purrr)
+library(ggplot2)
+library(ggpubr)
+library(ggrepel)
+library(ggdendro)
+library(viridis)
+library(rgplates)
+library(sp)
+library(stats)
+library(geosphere)
+library(iNEXT)
+library(ade4)
+library(adespatial)
+library(labdsv)
+library(ape)
+library(vegan)
+library(emstreeR)
+library(igraph)
+library("metagMisc")
+
+# devtools::install_github("Corentin-Gibert-Paleontology/DNCImper")
+library(DNCImper)
+
+```
+
+```{r}
+setwd("C:/Users/33677/Documents/NEW_WORK/THESE/Permian-Triassic_assembly process/DataBase conodonts")
+Occ.NT.2022 <- read.csv2("Occurence_Permian Triassic conodont_2022.csv",header = T, sep = ";",stringsAsFactors = TRUE)
+str(Occ.NT.2022)
+```
+
+## I. Database cleaning (1st round)
+
+We drop specimens left in open nomenclature, specimens not properly named (e.g., Cl_sp or Cl_spA_Ha2021) and dubious species. For details about dubious species, please refer to *Table S1_List of synonymes and discarded species*.
+
+
+```{r}
+Occ.NT.2022.clean <- Occ.NT.2022 %>% 
+  dplyr::filter(!Status_species %in% c("?","?_aff","?_indet",
+                                "aff","cf","cf_indet",
+                                "ex_gr","ex_gr_morph1","ex_gr_morph2",
+                                "gr","indet","quoted","s_l",
+                                "dubious"),
+         !Gn_Species_current%in%c(
+           "Cl_bogschi","Cl_chengyuanensis","Cl_microscupidata","Cl_postbitteri","Cl_shengi","Cl_xiangxianensis","Cl_zaki",
+           "Co_oezdemirae","E_bogschi","E_delicatula","E_gradata","E_nevadensis","E_praenevadensis","E_torta","E_transita","E_triassica", "Gg_tethydis","Hi_lobata",
+           "Me_longidentata","Ng_mombergensis","Ns_dronovi","Ns_excelsus","Pc_multispinosa","Pc_tridentata",
+           "Pr_geiseri","Pr_inclinatus","Pr_tricuspidatus","St_dobruskinae",
+           "Bo_spC_Orchard2007","Bo_spD_Leu2021","Bo_spE_Leu2021","Bo_spA_Leu2021","Bo_spB_Leu2021","Bo_spC_Leu2021","Bo_spA_Golding2021",
+           "Ch_spA_Ha2021","Ch_spB_Ha2021","Cl_spB_Kozur2005","Cl_spC_Kozur2005","Cl_spB_Gliwa2020","Cl_spC_Gliwa2020",
+           "Cl_spA_Hatleberg_and_Clark1984","Cl_spA_Sun2021","Cl_spB_Hatleberg_and_Clark1984","Cb_spA_Golding2021","Cb_spA_Leu2021",
+           "Cs_n_spA_Orchard_and_Zonneveld_2009","Cs_sp_Orchard_and_Zonneveld_2009","Cs_spA_Orchard2009","Cr_kochi_spp",
+           "D_spA_Sun2021","D_spB_Leu2021","D_spC_Leu2021","D_spD_Leu2021","Gg_spA_Leu2021","Gu_spA_Leu2021","Gu_spA_Orchard_and_Zonneveld_2009",
+           "Hi_spA_Gliwa2020","Ic_spA_Leu2021","Ic_spB_Leu2021","Mag_spA_Golding2021","Mag_spA_Leu2021","Mag_spB_Leu2021","Mag_spD_Orchard2021",
+           "Ng_spA_Golding2021","Ng_spA_Leu2021","Ng_spA_Liu2020","Ng_spB_Leu2021","Ng_spB_Liu2020","Ng_spB_Orchard2008","Ng_spC_Leu2021","Ng_spC_Orchard2007","Ng_spC_Orchard2008",
+           "Ng_spC_Orchard2021","Ng_spD_Orchard2007","Ng_spE_Orchard2007","Ng_spH_Golding2014","Ng_spH_Orchard2021",
+           "Ns_n_spQ_Orchard_and_Zonneveld_2009","Ns_spA_Leu2021","Ns_spB_Hatleberg_and_Clark1984","Ns_spC_Hatleberg_and_Clark1984",
+           "Ns_spD_Hatleberg_and_Clark1984","Ns_spR_Orchard2007","Ns_spS_Orchard2007","Ns_spV_Orchard2007","Nst_spA_Leu2021",
+           "Nv_spA_Leu2021","Nv_spB_Leu2021","Nv_sp_indetB_Leu2021","Nv_spD_Leu2021","Pr_sp1_Leu2021","Pr_sp2_Leu2021",
+           "Sg_spA_Golding2021","Sg_spA_Orchard2007","Sg_spA_Orchard_Nakrem2008","Sg_spA_Sun2021","Sg_spF_Orchard2007","Sp_spA_Leu2021","Sp_spB_Leu2021","Sp_spC_Leu2021",
+           "Ur_spA_Leu2021","V_spA_Wardlaw_and_Pogue1995","Wa_spA_Orchard2009",
+           "Ad_sp","Bo_sp","Cb_sp","Cl_sp","Cl_spp",
+           "Co_sp","Cr_sp","Cr_spp","Cs_spp","D_sp",
+           "E_sp","Eu_sp","Fu_sp","Gg_sp","Gu_sp",
+           "Ha_sp","Hi_sp","Hi_spp","Ic_sp","Ic_spp",
+           "Is_sp","Ir_sp","Mag_spp","Mag_sp","Me_sp",
+           "Mg_sp","Ng_sp","Ns_sp","Ns_spp","Nst_sp",
+           "Nst_spp","Nv_sp","Nv_spp","Pc_sp","Pc_spp",
+           "Pr_sp","Sp_sp","Sp_spp","Sg_sp","Sg_spp",
+           "St_sp","Sw_sp","Ts_sp","Ts_spp","V_sp"))%>%droplevels()
+
+```
+
+## II. From coordinates to paleocoordinates
+### II.a) Paleocoordinates calculation
+
+We convert GPS coordinates into paleocoordinates for each section. Given the globality of the study and that the paleogeography did not change that much between the Changhsingian and the Spathian (c.a. 254 Ma - 247 Ma), we decide to reconstruct the paleocoordinates at 250 Ma using the PALEOMAP model of Scotese through the package *rgplates*.
+
+```{r, fig.width=15, fig.height=10, warning=FALSE, message=FALSE}
+##Get paleocoordinates
+data.coord <- Occ.NT.2022.clean %>% 
+  dplyr::select(Section,Longitude,Latitude)%>%
+  droplevels()%>%unique()%>%
+  tibble::remove_rownames()%>%tibble::column_to_rownames(var="Section")
+
+data.paleocoord.off.PALEOMAP <- rgplates::reconstruct(data.coord, age=250, model="PALEOMAP", plateperiod=FALSE)
+
+#Plot paleocoordinates
+mapOff250 <- rgplates::reconstruct("coastlines", age=250, model="PALEOMAP")
+par(mai=c(0,0,0,0))
+svg(filename="paleomap_sections_raw.svg", width = 8)
+plot(mapOff250$geometry, border=NA, col="gray")
+points(data.paleocoord.off.PALEOMAP, cex=0.75, pch=16, col="darkgoldenrod")
+dev.off()
+    
+```
+
+### II.b) Adjust the paleocoordinates
+
+Some paleocoordinates are wrong: all japonese and bulgarian sections.
+The japonese sections are all relocated at N0-145°E.
+The bulgarian sections are all relocated at N40-15°E.
+For details, please refer to Guenser et al. (in prep.) and Guenser's PhD thesis (2020).
+
+
+```{r, message=FALSE, warning=FALSE, fig.width=15, fig.height=10}
+Paleocoord <- as.data.frame(data.paleocoord.off.PALEOMAP) %>%
+  tibble::rownames_to_column(var="Section")
+colnames(Paleocoord) <- c("Section","OffPaleolong","OffPaleolat")
+
+japan <- Occ.NT.2022.clean %>% 
+  filter(Province_State_country=="Japan") %>% 
+  select(Section) %>%
+  unique() %>% droplevels()
+Paleocoord$OffPaleolong[which(Paleocoord$Section %in% japan$Section)] <- 145
+Paleocoord$OffPaleolat[which(Paleocoord$Section %in% japan$Section)] <- 0
+
+Paleocoord$OffPaleolong[which(Paleocoord$Section %in% c("Ajvadzikdere","Tranak"))] <- 40
+Paleocoord$OffPaleolat[which(Paleocoord$Section %in% c("Ajvadzikdere","Tranak"))] <- 15
+
+data.paleocoord.off.PALEOMAP.acc <- as.matrix(Paleocoord[,2:3])
+
+svg(filename="paleomap_sections_clean.svg", width = 8)
+plot(mapOff250$geometry, border=NA, col="gray")
+points(data.paleocoord.off.PALEOMAP.acc, cex=0.75, pch=16, col="darkgoldenrod")
+dev.off()
+
+Occ.NT.2022.clean.paleocoord <- dplyr::full_join(Paleocoord, Occ.NT.2022.clean)
+
+```
+
+
+### II.c) Database cleaning (2nd round)
+
+We keep only data that are associated to a proper time interval, i.e., Changhsingian, Griesbachian, Dienerian, Smithian, Spathian (Ch, Gr, Di, Sm, Sp).
+
+
+```{r}
+Occ.NT.2022.clean.paleocoord%>%select(Stage,Sub_stage)%>%unique()%>%droplevels()%>%arrange(Stage)
+Occ.NT.2022.clean.paleocoord.acc <- Occ.NT.2022.clean.paleocoord%>%
+  filter(Stage %in% c("Changhsingian","Induan","Olenekian"), 
+         !Sub_stage %in% c("Griesbachian?","Dienerian?", "Dienerian/Smithian","Smithian?","Smithian/Spathian","?"))
+Occ.NT.2022.clean.paleocoord.acc%>%select(Stage,Sub_stage)%>%unique()%>%droplevels()%>%arrange(Stage)
+
+```
+
+## III. From sections to regions
+
+Sections are grouped into regions based on their paleogeographic closeness. One region includes at least one section.
+Then, we work now outside R environment to define the regions according to the dendrogram.
+
+### III.a) UPGMA dendrogram on paleocoordinates
+
+```{r, fig.width=75, fig.height=30}
+#Keep only sections and paleocoord
+BasinUPGMA <- Occ.NT.2022.clean.paleocoord.acc%>%
+  select(Province_State_country,Section,OffPaleolong,OffPaleolat)%>%
+  unique()%>%unite(Location,c(Province_State_country,Section),remove=FALSE)
+# write.csv2(BasinUPGMA, "BasinUPGMA_2023-09.csv",row.names = FALSE)
+
+BasinUPGMA.dist <- sp::spDists(as.matrix(BasinUPGMA[,c(4,5)]), longlat=TRUE)
+
+UPGMA <- stats::hclust(stats::as.dist(BasinUPGMA.dist), method = "average", members = NULL)
+par(mai=c(0,1,0.5,0))
+
+svg(filename="UPGMA_tree.svg", height = 10, width=63)
+plot(UPGMA, labels = BasinUPGMA$Location, hang = 0.1, check = TRUE, axes = TRUE, main = "",
+     frame.plot = FALSE, ann = TRUE, sub = NULL, xlab = NULL, ylab = "Height", cex=0.8)
+dev.off()
+
+```
+
+### III.b) Define the regions
+
+We defined 29 regions, each including between 1 and 64 sections (see supplementary information to Guenser et al. in prep. for details). We integrate the paleocoordinates to the database through *Table S2_Section_paleocoord_regions_2023-09*.
+Then, we calculate the mean paleocoordinates for each region.
+
+
+```{r, message=FALSE, fig.width=9, fig.height=6}
+setwd("C:/Users/33677/Documents/NEW_WORK/THESE/Data_SuppInf")
+Regions <- read.csv2("Table S2_Section_paleocoord_regions_2023-09.csv", sep=";", dec=",", header=TRUE, stringsAsFactors = TRUE)
+
+#Integrate regions to the DB
+Regions2 <- Regions%>%select(Section,Region)
+Occ.NT.2022.clean.regions <- dplyr::full_join(Regions2, Occ.NT.2022.clean.paleocoord.acc)%>%droplevels()
+rm(Regions2)
+
+#Map the sections, colored according to their region
+Section.coord <- Regions%>%select(Section,OffPaleolong,OffPaleolat)%>%tibble::column_to_rownames("Section")
+
+mapOff250 <- rgplates::reconstruct("coastlines", age=250, model="PALEOMAP")
+par(mfrow=c(1,1),
+    mai=c(0,0,0,0))
+plot(mapOff250$geometry, border=NA, col="gray95")
+points(Section.coord, pch=c(1:25,1:2)[Regions$Region], 
+       col=c(1:27)[Regions$Region],cex=2)
+
+
+#Calculate mean point for each region
+Regions.unique <- Regions %>%
+  select(Section,Region) %>% unique() %>% 
+  group_by(Region) %>% summarise(Nombre =n()) %>%
+  filter(Nombre==1) %>% droplevels() %>%
+  dplyr::pull(Region)
+
+Regions.coord.unique <- Regions%>%
+  select(OffPaleolong, OffPaleolat, Region)%>%
+  unique()%>%
+  filter(Region %in% Regions.unique)%>%
+  tibble::column_to_rownames(var="Region")%>%
+  droplevels()
+  
+Regions.coord <- Regions%>%
+  select(OffPaleolong, OffPaleolat, Region, Section)%>%
+  unique()%>%
+  filter(!Region %in% Regions.unique)%>%
+  droplevels()
+Regions.coord.list <- split(Regions.coord, Regions.coord$Region, drop=TRUE)
+
+Regions.coord.mean.list <-
+  lapply(Regions.coord.list, function(data){
+    m <- data %>% select(-Region, -Section)%>% droplevels()
+    n <- geosphere::geomean(m)
+  }
+  )
+Regions.coord.mean <- as.data.frame(do.call(rbind, Regions.coord.mean.list),
+                                    row.names = names(Regions.coord.mean.list))
+colnames(Regions.coord.mean) <- c("OffPaleolong", "OffPaleolat")
+
+
+#Map the mean coordinates
+ref <- data.frame(x=c(-180,-90,0,90,180),
+                  y=c(-90,-45,0,45,90))
+
+svg(filename = "paleomap_regions.svg", width = 15, height = 10)
+plot(mapOff250$geometry, border=NA, col="gray95")
+points(Regions.coord.mean, pch=16)
+points(Regions.coord.unique, pch=16, col="goldenrod")
+points(ref,pch=3,col="red")
+dev.off()
+
+#Transform paleolong to centre the data on Panthalassa (for BSN graphic representation)
+coord.mean.cent <- rbind(Regions.coord.mean,Regions.coord.unique)
+coord.mean.cent$OffPaleolong[which(coord.mean.cent$OffPaleolong<25)] <- coord.mean.cent$OffPaleolong[which(coord.mean.cent$OffPaleolong<25)] + 360
+coord.mean.cent.ord <- coord.mean.cent[order(coord.mean.cent$OffPaleolong),]
+
+
+```
+
+## IV. Assess the sampling effort
+
+Species accumulation curves are performed to estimate the sampling effort of each region, at a global time scale, then at the stage/substage level. Samples are species within sections. Regions that include less than 3 sections as well as regions with only one species are excluded from further analyses because they do not hold enough data according to *iNEXT* R package.
+Graphic representations include the accumulation curves and the sampling coverage, provided by *iNEXT* outputs.
+
+```{r}
+#Graphical functions
+SAC.graph <- #plot species accumulation curve
+  function(data, xmax, xseq, ymax, yseq){
+    g <- iNEXT::ggiNEXT(data,facet.var="Assemblage")+
+      theme_bw()+
+      scale_color_manual(values = viridis(1))+
+      scale_fill_manual(values = viridis(1))+
+      scale_x_continuous(breaks=seq(0,xmax,xseq))+
+      scale_y_continuous(breaks=seq(0,ymax,yseq),limits=c(0,ymax), expand=c(0,0))+
+      theme(legend.position="bottom",
+            text=element_text(size=8),
+            legend.title=element_text(size=8),
+            legend.text=element_text(size=8),
+            axis.title=element_text(size=8),
+            axis.text=element_text(size=8))
+    labs(y = "Species richness", x = "Number of sections")
+    #svg(filename = "SAC_Regions.svg", width = 18, height = 3.5)
+    g
+    #dev.off()
+  }
+
+SC.graph <- #plot sampling coverage
+  function(data, xmax, xseq){
+    # data.i <- lapply(data$iNextEst$size_based, function(data){data %>% filter(method=="observed")})
+    # data.df <- do.call(rbind.data.frame, data.i)
+    data.df <- data$iNextEst$size_based %>% filter(Method=="Observed")
+    
+    g <- ggplot2::qplot(data=data.df, x=t, y=SC, label=Assemblage)+
+      geom_point()+
+      geom_errorbar(aes(ymin=SC.LCL, ymax=SC.UCL),linewidth=0.5)+
+      geom_text_repel(aes(label=data.df$Assemblage),size=3)+
+      scale_y_continuous(breaks=seq(0,1,0.1), limits=c(0,1.01), expand=c(0,0))+
+      scale_x_continuous(breaks=seq(0,xmax,xseq), limits=c(0,xmax), expand=c(0,0))+
+      theme_bw()+
+      theme(text=element_text(size=8),
+            legend.title=element_text(size=8),
+            legend.text=element_text(size=8),
+            axis.title=element_text(size=8),
+            axis.text=element_text(size=8))+
+      labs(x="Number of sections", y="Sampling coverage")
+    g
+  }
+
+```
+
+### IV.a) Global species accumulation curve
+
+```{r, fig.width=20, fig.height=10, message=FALSE, warning=FALSE}
+Regions.un2 <- Regions %>% #Remove regions with one or two regions
+  select(Section,Region) %>% unique() %>% 
+  group_by(Region) %>% summarise(Nombre =n()) %>%
+  filter(Nombre%in%c(1,2)) %>% droplevels() %>%
+  dplyr::pull(Region)
+
+data.SAC <- Occ.NT.2022.clean.regions %>% select(Gn_Species_current,Section,Region) %>% 
+  filter(!Region %in% Regions.un2) %>%
+  droplevels() %>% unique()
+list.data.SAC <- split(data.SAC, data.SAC$Region, drop=TRUE)
+list.data.SAC <- lapply(list.data.SAC, function(data){data %>% select(-Region) %>% droplevels()})
+list.data.SAC <- lapply(list.data.SAC, function(data){as.data.frame.matrix(table(data$Gn_Species_current, data$Section))})
+
+num.row <- unlist(lapply(list.data.SAC, nrow))
+num.row.1 <- which(num.row>1)
+list.data.SAC <- list.data.SAC[c(num.row.1)]#Remove regions with only one species occurrence
+
+i1 <- iNEXT::iNEXT(list.data.SAC, datatype = "incidence_raw", endpoint=500)
+SAC.analysis <- SAC.graph(i1, xmax=500, xseq=200, ymax=200, yseq=25)
+SC.analysis <- SC.graph(i1, xmax=70, xseq=5)
+ggarrange(SAC.analysis, SC.analysis, col=1, row=2)
+
+svg(filename = "Species accumulation curve.svg", width = 12, height=3)
+SAC.analysis
+dev.off()
+svg(filename = "Sampling coverage.svg", width = 6.3, height=4)
+SC.analysis
+dev.off()
+
+
+```
+
+
+## V. Build incidence matrices
+
+```{r}
+data.SAC.time <- Occ.NT.2022.clean.regions %>%
+  select(Gn_Species_current,Section,Region,Stage,Sub_stage) %>% droplevels() %>%
+  mutate(Sub_stage=recode(Sub_stage, 'Upper' = 'Changhsingian', 'Late'= 'Changhsingian', 'Lower'='Changhsingian'),
+         Sub_stage = coalesce(Sub_stage, Stage)) %>% select(!Stage) %>%
+  droplevels() %>% unique()
+
+list.data.SAC.time <- #build a nested list by time, then region
+  purrr::reduce(.x = list(~Sub_stage, ~Region),
+                .f = ~ map_depth(.x, .depth = pluck_depth(.x) - 2,  split, .y),
+                .init = data.SAC.time)
+
+list.data.SAC.time.full <- #remove absent region from each time interval
+  lapply(list.data.SAC.time, function(data){
+    purrr::discard(data, function(x) is_empty(x$Section))
+  })
+list.data.SAC.time.full <- #remove useless factors
+  lapply(list.data.SAC.time.full, function(data){
+    purrr::map(data,~{.x %>%
+        select(-Region, -Sub_stage) %>%
+        droplevels()})})
+
+
+list.data.SAC.time.up2 <- #keep only regions with more than 2 sections
+  lapply(list.data.SAC.time.full, function(data){
+           l <- list()
+           for (i in 1:length(data)) {
+             if (nlevels(as.factor(data[[i]]$Section))>2)
+               l <- c(l, data[i])
+           }
+           data <- l
+         })
+list.data.SAC.time.up2.occ <- #Occurrence matrix
+  lapply(list.data.SAC.time.up2, function(data){
+    purrr::map(data, function(x){as.data.frame.matrix(table(x$Gn_Species_current, x$Section))})
+  })
+list.data.SAC.time.up2.occ2 <- #Remove regions with only one species
+  lapply(list.data.SAC.time.up2.occ, function(data){
+    num.row <- unlist(lapply(data, nrow))
+    num.row.up1 <- which(num.row>1)
+    data <- data[c(num.row.up1)]
+  })
+list.data.SAC.time.up2.occ2 <- list( #Arrange the dataset
+  Changhsingian = list.data.SAC.time.up2.occ2$Changhsingian,
+  Griesbachian = list.data.SAC.time.up2.occ2$Griesbachian,
+  Dienerian = list.data.SAC.time.up2.occ2$Dienerian,
+  Smithian = list.data.SAC.time.up2.occ2$Smithian,
+  Spathian = list.data.SAC.time.up2.occ2$Spathian
+  )
+```
+
+```{r}
+#Function for dividing datasets depending on singletons
+Remove_single <- function(data){
+  data <- data %>% mutate(Somme = rowSums(data), RowNames = rownames(data)) %>% filter(Somme != 1)
+  rownames(data) <- data$RowNames
+  data <- data %>% select(-Somme, -RowNames)
+}
+
+#Without regions < 2 sections
+list.occ.up2 <- split(data.SAC.time, data.SAC.time$Sub_stage)  
+list.occ.up2 <- lapply(list.occ.up2, droplevels)
+
+list.occ.up2$Changhsingian <- list.occ.up2$Changhsingian %>%
+  filter(Region %in% c(names(list.data.SAC.time.up2$Changhsingian))) %>% 
+  droplevels()
+list.occ.up2$Griesbachian <- list.occ.up2$Griesbachian %>% 
+  filter(Region %in% c(names(list.data.SAC.time.up2$Griesbachian))) %>% 
+  droplevels()
+list.occ.up2$Dienerian <- list.occ.up2$Dienerian %>% 
+  filter(Region %in% c(names(list.data.SAC.time.up2$Dienerian))) %>% 
+  droplevels()
+list.occ.up2$Smithian <- list.occ.up2$Smithian %>% 
+  filter(Region %in% c(names(list.data.SAC.time.up2$Smithian))) %>% 
+  droplevels()
+list.occ.up2$Spathian <- list.occ.up2$Spathian %>% 
+  filter(Region %in% c(names(list.data.SAC.time.up2$Spathian))) %>% 
+  droplevels()
+
+list.occ.up2 <- #remove useless factors
+  lapply(list.occ.up2, function(data){ 
+    data %>% select(-Section, -Sub_stage) %>%
+      unique() %>% droplevels()
+  })
+
+list.contingence.up2 <- lapply(list.occ.up2, function(data){
+  as.data.frame.matrix(table(data$Gn_Species_current, data$Region))
+})
+list.contingence.up2 <- list.contingence.up2[c("Changhsingian","Griesbachian","Dienerian","Smithian","Spathian")]
+
+list.contingence.up2.single <- list.contingence.up2
+list.contingence.up2.Nosingle <- lapply(list.contingence.up2, Remove_single)
+list.contingence.up2.Nosingle <- lapply(list.contingence.up2.Nosingle, droplevels)
+
+# write.csv2(list.contingence.up2.Nosingle$Changhsingian, file="Conodont_incidence matrix_no singleton_Changhsingian.csv")
+# write.csv2(list.contingence.up2.Nosingle$Griesbachian, file="Conodont_incidence matrix_no singleton_Griesbachian.csv")
+# write.csv2(list.contingence.up2.Nosingle$Dienerian, file="Conodont_incidence matrix_no singleton_Dienerian.csv")
+# write.csv2(list.contingence.up2.Nosingle$Smithian, file="Conodont_incidence matrix_no singleton_Smithian.csv")
+# write.csv2(list.contingence.up2.Nosingle$Spathian, file="Conodont_incidence matrix_no singleton_Spathian.csv")
+
+```
+
+## VI. Multivariate analyses
+### VI.a) ORP analyses
+
+The ORP and associated graphical R functions have their own GitHub repository: https://github.com/PaulineGnsr/ORP_analysis
+
+```{r, fig.width=8, fig.height=12}
+list.ORP.up2 <-list(
+  Changhsingian = list(Changhsingian = as.data.frame(t(list.contingence.up2.single$Changhsingian)), 
+                       name = "Changhsingian"), 
+  Griesbachian = list(Griesbachian = as.data.frame(t(list.contingence.up2.single$Griesbachian)), 
+                      name = "Griesbachian"),
+  Dienerian = list(Dienerian = as.data.frame(t(list.contingence.up2.single$Dienerian)), 
+                   name = "Dienerian"),
+  Smithian = list(Smithian = as.data.frame(t(list.contingence.up2.single$Smithian)), 
+                  name = "Smithian"),
+  Spathian = list(Spathian = as.data.frame(t(list.contingence.up2.single$Spathian)), 
+                  name = "Spathian")
+)
+
+
+ORP <- function(data, Nite, right){
+  
+  #Empiric ORP
+  n.sp <- as.numeric(ncol(data[[1]]))
+  #n.region <- as.numeric(nrow(data[[1]]))
+  
+  perc <- apply(data[[1]], 2, function(x)sum(x)/length(x)*100)
+  hist.perc <- hist(perc, breaks=seq(0,100,10), right=right, plot=FALSE)
+  df.perc <- data.frame("hist.perc.counts"=as.numeric(hist.perc$counts),
+                        "hist.perc.perc"=apply(as.data.frame(hist.perc$counts), 1, 
+                                               function(x)x/n.sp*100),
+                        row.names = hist.perc$mids/100)
+  
+  
+  #A function for CI and null model
+  l.boot <- lapply(vector("list",Nite), function(x){sample(data[[1]], replace = TRUE)})
+  l.lot <- lapply(vector("list",Nite), function(x){apply(data[[1]],1,function(x)sample(x))})
+  
+  df.boot <- #Boostrap
+    lapply(l.boot, function(data){
+      perc.boot <- as.numeric(apply(data, 2, function(x)sum(x)/length(x)*100))
+      hist.perc.boot <- hist(perc.boot, breaks=seq(0,100,10), right=right, plot=FALSE)
+      
+      hist.perc.boot.count <- hist.perc.boot$counts
+      hist.perc.boot.perc <- apply(as.data.frame(hist.perc.boot$count), 1,
+                                   function(x)x/n.sp*100)
+      
+      list(hist.perc.boot.count, hist.perc.boot.perc)
+      
+    }
+    )
+  
+  df.boot.count <- 
+    as.data.frame(lapply(df.boot, function(data){data[[1]]}),
+                  col.names = 1:length(l.boot),
+                  row.names = seq(0.05,0.95,0.10)
+    )
+  df.boot.perc <- 
+    as.data.frame(lapply(df.boot, function(data){data[[2]]}),
+                  col.names = 1:length(l.boot),
+                  row.names = seq(0.05,0.95,0.10)
+    )
+  
+  
+  df.lot <- #Lottery
+    lapply(l.lot, function(data){
+      perc.lot <- as.numeric(apply(t(data), 2, function(x)sum(x)/nrow(t(data))*100))
+      hist.lot <- hist(perc.lot, breaks=seq(0,100,10), right=right, plot=FALSE)
+      
+      hist.lot.count <- hist.lot$counts
+      hist.lot.perc <- apply(as.data.frame(hist.lot$counts), 1, 
+                             function(x)x/n.sp*100)
+      
+      list(hist.lot.count, hist.lot.perc)
+    }
+    )
+  df.lot.count <- 
+    as.data.frame(lapply(df.lot, function(data){data[[1]]}),
+                  col.names = 1:length(l.boot),
+                  row.names = hist.perc$mids/100
+    )
+  df.lot.perc <-
+    as.data.frame(lapply(df.lot, function(data){data[[2]]}),
+                  col.names = 1:length(l.boot),
+                  row.names = hist.perc$mids/100
+    )
+  
+  #LowerBound and UpperBound
+  CI.count.min <- as.numeric(apply(df.boot.count,1,function(x)sort(as.numeric(x))[0.025*Nite]))
+  CI.count.max <- as.numeric(apply(df.boot.count,1,function(x)sort(as.numeric(x))[0.975*Nite]))
+  CI.perc.min <- as.numeric(apply(df.boot.perc,1,function(x)sort(as.numeric(x))[0.025*Nite]))
+  CI.perc.max <- as.numeric(apply(df.boot.perc,1,function(x)sort(as.numeric(x))[0.975*Nite]))
+  
+  lot.count.min <- as.numeric(apply(df.lot.count,1,function(x)sort(as.numeric(x))[0.025*Nite]))
+  lot.count.max <- as.numeric(apply(df.lot.count,1,function(x)sort(as.numeric(x))[0.975*Nite]))
+  lot.perc.min <- as.numeric(apply(df.lot.perc,1,function(x)sort(as.numeric(x))[0.025*Nite]))
+  lot.perc.max <- as.numeric(apply(df.lot.perc,1,function(x)sort(as.numeric(x))[0.975*Nite]))
+  
+  #Gather all results
+  df.ORP <- cbind (df.perc, 
+                   CI.count.min, CI.count.max, CI.perc.min, CI.perc.max,
+                   lot.count.min, lot.count.max, lot.perc.min, lot.perc.max)
+  #print(df.ORP)
+  
+  #Graphic representation
+  #Taxa count
+  plot.count <- 
+    ggplot(df.ORP, aes(x=as.numeric(rownames(df.ORP)), y=hist.perc.counts))+
+    geom_ribbon(aes(ymin=lot.count.min, ymax=lot.count.max),fill="grey90")+
+    geom_errorbar(aes(ymin=CI.count.min, ymax=CI.count.max), width=0) +
+    geom_point(size=1)+
+    theme_bw()+
+    theme(text=element_text(size=8),
+          legend.title=element_text(size=8),
+          legend.text=element_text(size=8),
+          axis.title=element_text(size=8),
+          axis.text=element_text(size=8),
+          plot.title = element_text(size=10),
+          panel.grid.major.x = element_blank(),
+          panel.grid.minor.x = element_blank(),
+          panel.grid.minor.y = element_blank())+
+    scale_y_continuous(breaks=seq(0,60,10),limits=c(0,60))+
+    scale_x_continuous(breaks=seq(0,1,0.1),limits=c(0,1))+
+    labs(x="Occurence ratio", y="Number of taxa", title=data[[2]])
+  
+  #Taxa perc
+  plot.perc <- 
+    ggplot(df.ORP, aes(x=as.numeric(rownames(df.ORP)), y=hist.perc.perc))+
+    geom_ribbon(aes(ymin=lot.perc.min, ymax=lot.perc.max),fill="grey90")+
+    geom_errorbar(aes(ymin=CI.perc.min, ymax=CI.perc.max), width=0) +
+    geom_point(size=1)+
+    theme_bw()+
+    theme(text=element_text(size=8),
+          legend.title=element_text(size=8),
+          legend.text=element_text(size=8),
+          axis.title=element_text(size=8),
+          axis.text=element_text(size=8),
+          panel.grid.major.x = element_blank(),
+          panel.grid.minor.x = element_blank(),
+          panel.grid.minor.y = element_blank())+
+    scale_y_continuous(breaks=seq(0,80,10),limits=c(0,80))+
+    scale_x_continuous(breaks=seq(0,1,0.1),limits=c(0,1))+
+    labs(x="Occurence ratio", y="Percentage of taxa", title="")
+  
+  ggarrange(plot.count, plot.perc)
+  
+}
+
+multi.ORP <- lapply(list.ORP.up2, ORP, Nite=9999, right=TRUE)
+plot.ORP <- ggarrange(plotlist=multi.ORP,ncol=1,nrow=5)
+plot.ORP
+
+ggsave(file="ORP_conodont.svg", plot=plot.ORP,
+       width = 160, height = 247 , units="mm")
+
+```
+
+
+### VI.b) Ordination analyses (PCoA and UPGMA classification)
+
+```{r, warning=FALSE, fig.width=8, fig.height=16}
+
+Dice.Nosingle <- lapply(list.contingence.up2.Nosingle, function(data){
+  distance <-
+    labdsv::dsvdis(as.data.frame(t(data)),
+                   index="sorensen",
+                   step=0.0,diag=FALSE, upper=FALSE)
+  # distance[which(distance==0)] <- 0.0000001
+  return(distance)
+})
+
+Dice.Nosingle.up2 <- Dice.Nosingle
+
+Dice.Nosingle.name <-list(
+  Changhsingian = list(Changhsingian = Dice.Nosingle.up2$Changhsingian, name="Changhsingian"), 
+  Griesbachian = list(Griesbachian = Dice.Nosingle.up2$Griesbachian, name="Griesbachian"),
+  Dienerian = list(Dienerian = Dice.Nosingle.up2$Dienerian, name="Dienerian"),
+  Smithian = list(Smithian = Dice.Nosingle.up2$Smithian, name="Smithian"),
+  Spathian = list(Spathian = Dice.Nosingle.up2$Spathian, name="Spathian"))
+
+Multi_analysis <- function(data) {
+  
+  #PCOA
+  pco_dice <- labdsv::pco(data[[1]],k=2)
+  pco1 <- pco_dice$eig[1]/sum(pco_dice$eig)*100
+  pco2 <- pco_dice$eig[2]/sum(pco_dice$eig)*100
+  mst_pco_dice <- emstreeR::ComputeMST(pco_dice$points)
+  
+  g <- ggplot(data = mst_pco_dice, aes(x = V1, y = V2, from=from, to=to))+
+    geom_point(size=1)+
+    theme_bw()+
+    theme(text=element_text(size=8),
+          legend.title=element_text(size=8),
+          legend.text=element_text(size=8),
+          axis.title=element_text(size=8),
+          axis.text=element_text(size=8))+
+    # ggtitle(paste(data[[2]], "w/o singletons"))+
+    stat_MST(colour="red")+
+    geom_text_repel(aes(label=rownames(pco_dice$points)), size=2.5)+
+    labs(y = paste("PCoA 2 (", format(round(pco2,2),nsmall=2), "%)"), 
+         x = paste("PCoA 1 (", format(round(pco1,2),nsmall=2), "%)"))
+  
+  #UPGMA
+  UPGMA_dice <- stats::hclust(data[[1]], method = "average", members = NULL)
+  d <- ggdendrogram(UPGMA_dice, rotate = FALSE, size = 2)+
+    theme(axis.text.x = element_text(size = 8))
+  
+  #Graphic gathering
+  ggarrange(g,d)
+}
+
+multi.analysis <- lapply(Dice.Nosingle.name, Multi_analysis)
+multi.plot <- ggarrange(plotlist=multi.analysis,ncol=1,nrow=5)
+multi.plot
+
+ggsave(file="PCoA_UPGMA_Dice_conodont_no singleton.svg", plot=multi.plot,
+       width=100, height=200, units="mm")
+
+#Get table of principal axes
+VarexDice <- lapply(Dice.Nosingle.up2, function(data){
+  pco_dice <- labdsv::pco(data,k=2)
+  Var <- (pco_dice$eig/sum(pco_dice$eig))*100
+}
+)
+Varex_Dice <- data.frame(lapply(VarexDice, "length<-", max(lengths(VarexDice))))
+colnames(Varex_Dice) <- c("Changhsingian","Griesbachian","Dienerian","Smithian","Spathian")
+Varex_Dice
+write.csv2(x = Varex_Dice, file="PCoA axes_conodont.csv")
+
+CoordDice <- lapply(Dice.Nosingle.up2, function(data){
+  pco_dice <- labdsv::pco(data,k=2)
+  pco.point <- pco_dice$points
+}
+)
+
+```
+
+### VI.c) BSN analyses
+
+The BSN and associated graphical R functions have their own GitHub repository: https://github.com/PaulineGnsr/BSN_analysis
+
+```{r, fig.width=15, fig.height=5}
+#### BSN ANALYSIS ####
+list.BSN.up2 <-list(Changhsingian = as.data.frame(t(list.contingence.up2.Nosingle$Changhsingian)),
+                    Griesbachian = as.data.frame(t(list.contingence.up2.Nosingle$Griesbachian)),
+                    Dienerian = as.data.frame(t(list.contingence.up2.Nosingle$Dienerian)),
+                    Smithian = as.data.frame(t(list.contingence.up2.Nosingle$Smithian)),
+                    Spathian = as.data.frame(t(list.contingence.up2.Nosingle$Spathian))
+                    )
+
+BSN <- function(data){
+  ##2. Minimum Spanning Network (msn)
+  paupau.quad <- function(data){
+    dist <- labdsv::dsvdis(data, index="sorensen", step=0.0, diag=FALSE, upper=FALSE)
+    # dist.S <- adespatial::dist.ldc(data, method="ab.simpson", binary=TRUE, samp=FALSE, silent=TRUE)
+    # dist <- dist.D - dist.S
+    
+    df.dist <- metagMisc::dist2list(dist, tri=TRUE)
+    colnames(df.dist) <- c("col","row","weight")
+    df.dist$col <- as.character(df.dist$col)
+    df.dist$row <- as.character(df.dist$row)
+    
+    df.dist.sort <- df.dist %>% dplyr::arrange(weight)
+    df.dist.sort
+    
+    edg <- c()
+    for (i in 1:nrow(df.dist.sort)) {
+      #print(paste("i=",i))
+      
+      edg <- c(edg,
+               df.dist.sort[i,1],df.dist.sort[i,2])
+      
+      if (rlang::is_empty(row.names(data)[!row.names(data) %in% edg])) {
+        n <- length(edg)/2
+        df.dist.sort.msn <- df.dist.sort[1:n,]
+        msn <- igraph::graph_from_data_frame(df.dist.sort.msn, directed=FALSE)
+      }
+      else{next}
+      
+      if(igraph::is_connected(msn)==FALSE){next}
+      else if (igraph::is_connected(msn)==TRUE){
+        m <- max(which(df.dist.sort$weight==df.dist.sort$weight[i]))
+      }
+      break}
+    msn.edgelist <- df.dist.sort[1:m,]
+    msn.graph <- igraph::graph_from_data_frame(msn.edgelist, directed=FALSE)
+  }
+  
+  graph.test <- paupau.quad(data)
+  # plot(graph.test)
+  # igraph::E(graph.test)$weight
+  
+  ##3. Boostrapping
+  nboot <- 9999
+  boot <- lapply(vector("list", nboot), 
+                 function(x){
+                   boots <- sample(data, replace = TRUE)
+                 }
+  )
+  boot.msn <- lapply(boot, paupau.quad)
+  boot.msn <- c(list(graph.test), boot.msn)
+  summary(as.factor(unlist(lapply(boot.msn, igraph::is_connected))))
+  
+  ##Calculate bootstrap values
+  n <- vcount(graph.test)
+  bootstrap_values <- matrix(0, nrow = n, ncol = n, 
+                             dimnames = list(V(graph.test)$name, 
+                                             V(graph.test)$name))
+  for (i in 1:length(boot.msn)) {
+    boot_msn_edges <- get.edgelist(boot.msn[[i]])
+    for (j in 1:nrow(boot_msn_edges)) {
+      bootstrap_values[boot_msn_edges[j, 1],
+                       boot_msn_edges[j, 2]] <-
+        bootstrap_values[boot_msn_edges[j, 1],
+                         boot_msn_edges[j, 2]] + 1
+    }
+  }
+  bootstrap_values <- bootstrap_values+t(bootstrap_values)
+  bootstrap_values <- bootstrap_values / length(boot.msn)
+  bootstrap_values[lower.tri(bootstrap_values)] <- NA
+  bootstrap_values <- round(bootstrap_values, digits=3)
+  
+  ##Loop through edges of msn and assign bootstrap values
+  amsn <- graph.test
+  
+  for (i in 1:length(E(amsn))) {
+    from <- ends(amsn, E(amsn)[i])[1]
+    to <- ends(amsn, E(amsn)[i])[2]
+    E(amsn)$bootstrap[i] <- bootstrap_values[from, to]
+  }
+  
+  # plot(amsn)
+  # igraph::get.data.frame(amsn) %>% arrange(bootstrap)
+  
+  
+  ##4. BSN
+  cat("\n", "NEW BSN", "\n")
+  amsn.df.sort <- igraph::as_data_frame(amsn) %>% dplyr::arrange(desc(bootstrap))
+  amsn.sort <- igraph::graph_from_data_frame(amsn.df.sort, directed=FALSE)
+  amsn.comp <- amsn.sort
+  v <- make_empty_graph(directed = FALSE, n = vcount(amsn.sort)) %>% set_vertex_attr("name", value = V(amsn.sort)$name)
+  n <- length(E(amsn))
+  
+    for(i in n:1){ #For each edge of the msn, from the weakest to the strongest bs
+      amsn.df.sort <- igraph::as_data_frame(amsn.sort) %>% dplyr::arrange(desc(bootstrap))
+      amsn.sort <- igraph::graph_from_data_frame(amsn.df.sort, directed=FALSE)
+      sub.amsn <- delete_edges(amsn.sort, edges=E(amsn.sort)[i]) #Remove the edge and...
+      
+      #print(is_connected(sub.amsn))
+      if (!is_connected(sub.amsn)  ){ #...evaluate the connectivity of the network
+        cat( #A message appears if this edge is crucial for the network
+          E(amsn.sort)[[i]],
+          as_ids(E(amsn.sort)[[i]]),
+          "WARNING DISCONNECTION: kept",
+          "\n"
+        )
+        next
+      }
+      
+      simp <- igraph::all_simple_paths(amsn.sort, amsn.df.sort[i,1], amsn.df.sort[i,2], cutoff=-1)
+      len <- sapply(simp, length)
+      simp.sort <- simp[order(len) - 1]
+      
+      comp <- as.vector(unlist(lapply(simp.sort, function(x){
+        g <- make_empty_graph(directed = FALSE, n = vcount(amsn.sort)) %>% set_vertex_attr("name", value = V(amsn.sort)$name)
+        g2 <- g + path(x)
+        
+        amsn.sort.sub <- #A subgraph of the msn is then computed with only the alternative path to keep the associated bs
+          subgraph.edges(amsn.sort, eids=E(amsn.sort, P=as.vector(t(get.edgelist(g2)))), delete.vertices = TRUE)
+        
+        prod(E(amsn.sort.sub)$bootstrap) > E(amsn.sort)$bootstrap[i]
+      })))
+      
+      if (length(which(comp==TRUE)) > 0){ #replace by TRUE
+        l <- min(which(comp==TRUE))
+        
+        cat( #A message appears...
+          i,
+          as_ids(E(amsn.sort)[[i]]),
+          "is",
+          "weaker than",
+          as_ids(simp.sort[[l]]),
+          "(",l,"/",length(comp),")",
+          "\n"
+        )
+        
+        if(i==1){
+          #print(i)
+          amsn.sort <- delete_edges(amsn.sort, E(amsn.sort)[i])
+          break
+        }
+        else if(E(amsn.sort)$bootstrap[i] == E(amsn.sort)$bootstrap[i-1]){
+          v <- v + edge(amsn.df.sort[i,1], amsn.df.sort[i,2])
+          #print(as_ids(E(v)))
+        }
+        else{
+          v <- v + edge(amsn.df.sort[i,1], amsn.df.sort[i,2])
+          #print(as_ids(E(v)))
+          amsn.sort <- amsn.sort - v
+        }
+      }
+      else{
+        cat( #A message appears...
+          i,
+          "There is no stronger edge than",
+          as_ids(E(amsn.sort)[[i]]),
+          "nsimp =",length(comp),
+          "\n"
+        )
+      }
+    }
+  
+  #plot(amsn.sort)
+  #get.data.frame(amsn.sort) %>% arrange(desc(bootstrap))
+  return(amsn.sort)
+  
+}
+
+multi.BSN <- lapply(list.BSN.up2, BSN)
+
+#Graphic representation
+data.BSN <- list(Changhsingian = list(Changhsingian = multi.BSN$Changhsingian,
+                                      coopco = CoordDice$Changhsingian,
+                                      name="Changhsingian"), 
+                 Griesbachian = list(Griesbachian = multi.BSN$Griesbachian,
+                                     coopco = CoordDice$Griesbachian,
+                                     name="Griesbachian"),
+                 Dienerian = list(Dienerian = multi.BSN$Dienerian,
+                                  coopco = CoordDice$Dienerian,
+                                  name="Dienerian"),
+                 Smithian = list(Smithian = multi.BSN$Smithian,
+                                 coopco = CoordDice$Smithian,
+                                 name="Smithian"),
+                 Spathian = list(Spathian = multi.BSN$Spathian,
+                                 coopco = CoordDice$Spathian,
+                                 name="Spathian")
+                 )
+
+graph.BSN <- function(data){
+  
+  width <- E(data[[1]])$bootstrap
+  width[which(width==1)] <- 5.5
+  width[which(width<1 & width>=0.9)] <- 4
+  width[which(width<0.9 & width>=0.8)] <- 2.5
+  width[which(width<0.8)] <- 1
+  
+  E(data[[1]])$width <- width
+  
+  colfuncV <- viridis# colorRampPalette(c("black","grey90"))#
+  colfuncI <- viridis_pal(option="inferno", direction=-1)
+  colors <- c(colfuncV(50), colfuncI(51))
+  colors.weight <- colors[(E(data[[1]])$weight*100)+1]
+  
+  
+  svg(filename=paste("BSN_conodont",data[[3]],".svg"), width = 10, height = 3)
+  
+  par(mfrow=c(1,3))
+  #simple representation in a circle
+  layout.circle <- layout_in_circle(data[[1]])
+  plot.circle <-
+    plot(data[[1]], layout=layout.circle, main=data[[3]],
+         edge.color=colors.weight,
+         vertex.size=5, vertex.color="black", vertex.frame.color=NA,
+         vertex.label.color="black", vertex.label.size=5)
+  
+  #matching with pco axes
+  coopco <- data[[2]][match(V(data[[1]])$name,
+                            rownames(data[[2]])),]
+  lo.pco <- norm_coords(coopco,
+                        xmin=min(coopco[,1]), xmax=max(coopco[,1]),
+                        ymin=min(coopco[,2]), ymax=max(coopco[,2]))
+  plot.pcoa <-
+    plot.igraph(data[[1]], rescale=F, layout=lo.pco, main="BSN vs PCoA",
+                xlim = c(min(coopco[,1]), max(coopco[,1])),
+                ylim = c(min(coopco[,2]), max(coopco[,2])),
+                edge.color=colors.weight,
+                vertex.size=1.5, vertex.color="black", vertex.frame.color=NA,
+                vertex.label.color="black")
+  
+  #matching with paleocoord
+  coord <- coord.mean.cent.ord[rownames(coord.mean.cent.ord)%in%V(data[[1]])$name,]
+  coord <- coord[match(V(data[[1]])$name, rownames(coord)),]
+  
+  lo.coord <- norm_coords(as.matrix(coord),
+                          xmin=min(coord$OffPaleolong), xmax=max(coord$OffPaleolong),
+                          ymin=min(coord$OffPaleolat), ymax=max(coord$OffPaleolat))
+  plot.palgeo <-
+    plot.igraph(data[[1]], rescale=F, layout=lo.coord, main="BSN vs paleogeography",
+                xlim = c(25, 381),
+                ylim = c(-90, 90),
+                edge.color=colors.weight,
+                vertex.size=1.5, vertex.color="black", vertex.frame.color=NA,
+                vertex.label.color="black")
+  dev.off()
+
+}
+
+multi.graph.BSN <- lapply(data.BSN, graph.BSN)
+
+#Save data table
+data.BSN.table <- lapply(data.BSN, function(data){
+  data.table <- igraph::as_data_frame(data[[1]])
+  data.table <- data.table %>% tibble::rownames_to_column(var="Edge")
+  colnames(data.table) <- c("Edge", "Region 1", "Region 2", "Dice index", "Bootstrap support")
+  write.csv2(x = data.table, file=paste("BSN_data_conodont",data[[3]],".csv"), row.names = FALSE)
+  return(data.table)
+})
+
+```
+
+
+### VI.f) Define biocores for each time interval
+
+We test the significance of biocores detected with ordination+clustering analyses.  
+Changhsingian: longitudinal coastal/open Tethys differentiation, B1 = *China*-*Pakistan North*-*Iran*; B2 = *Japan*-*Malaysia.*  
+Griesbachian: longitudinal differentiation Tethys/Panthalassa, B1 = *Adriatic*-*Iran*-*Malaysia*-*Himalaya*-*Pakistan*-*ChinaS*; B2 = *Alberta*-*Ellesmere*-*Japan*-*USA*-*British Columbia*  
+Dienerian: tiny latitudinal differentiation equator s.s. vs others, B1 = *Adriatic*-*Japan*; B2 = *USA*-*Spitsbergen*-*Malaysia*-*China*-*Pakistan*-*Alberta*-*New Zealand*-*Himalaya*-*Ellesmere*  
+Smithian: B1 = *Primorye*-*China*-*Japan*-*USA*-*British Columbia*-*Australia*-*Himalaya*-*Oman*-*Alberta*; B2 = *Laptev*-*Spitsbergen*  
+Spathian: longitudinalish diffentiation, B1 = *British Columbia*-*Russia South*-*Primorye*-*Adriatic*; B2 = *USA*-*Oman*-*Himalaya*-*Japan*-*China*
+
+```{r}
+Ch <- list.contingence.up2.Nosingle$Changhsingian[,!names(list.contingence.up2.Nosingle$Changhsingian)%in%c("Ell","Him","Adr")]
+dist.Ch <- labdsv::dsvdis(as.data.frame(t(Ch)), index="sorensen", step=0.0, diag=FALSE, upper=FALSE)
+group.Ch <- t(data.frame("group"=c(1,1,2,2,1),
+                         row.names=names(Ch)))
+
+Gr <- list.contingence.up2.Nosingle$Griesbachian
+dist.Gr <- labdsv::dsvdis(as.data.frame(t(Gr)), index="sorensen", step=0.0, diag=FALSE, upper=FALSE)
+group.Gr <- t(data.frame("group"=c("Tethys","Panthalassa","Panthalassa","Tethys","Panthalassa","Tethys","Tethys","Panthalassa","Tethys","Tethys","Panthalassa"),
+                         row.names=names(Gr)))
+
+Di <- list.contingence.up2.Nosingle$Dienerian
+dist.Di <- labdsv::dsvdis(as.data.frame(t(Di)), index="sorensen", step=0.0, diag=FALSE, upper=FALSE)
+group.Di <- t(data.frame("group"=c("Equator","Tropics","Tropics","Tropics","Tropics","Equator","Tropics","Tropics","Tropics"),
+                         row.names=names(Di)))
+
+Sm <- list.contingence.up2.Nosingle$Smithian[,!names(list.contingence.up2.Nosingle$Smithian)%in%c("Adr","Mal")]
+dist.Sm <- labdsv::dsvdis(as.data.frame(t(Sm)), index="sorensen", step=0.0, diag=FALSE, upper=FALSE)
+group.Sm <- t(data.frame("group"=c("Tethys-Panthalassa","Tethys-Panthalassa","Tethys-Panthalassa","Tethys-Panthalassa","Tethys-Panthalassa","Tethys-Panthalassa","N-Panthalassa","Tethys-Panthalassa","Tethys-Panthalassa","N-Panthalassa","Tethys-Panthalassa"),
+                         row.names=names(Sm)))
+
+Sp <- list.contingence.up2.Nosingle$Spathian[,!names(list.contingence.up2.Nosingle$Spathian)%in%c("Alb","EurE")]
+dist.Sp <- labdsv::dsvdis(as.data.frame(t(Sp)), index="sorensen", step=0.0, diag=FALSE, upper=FALSE)
+group.Sp <- t(data.frame("group"=c("North","North","South","South","South","South","North","North","South"),
+                         row.names=names(Sp)))
+
+group.Ch
+group.Gr
+group.Di
+group.Sm
+group.Sp
+
+```
+
+
+### VI.g) ANOSIM and SIMPER analysis
+
+```{r, fig.width=9, fig.height=3}
+anosim.simper.data <-list(
+  Changhsingian = list(Changhsingian = Ch, dist = dist.Ch, group = group.Ch, name="Changhsingian"),
+  Griesbachian = list(Griesbachian = Gr, dist = dist.Gr, group = group.Gr, name="Griesbachian"),
+  Dienerian = list(Dienerian = Di, dist = dist.Di, group = group.Di, name="Dienerian"),
+  Smithian = list(Smithian = Sm, dist = dist.Sm, group = group.Sm, name="Smithian"),
+  Spathian = list(Spathian = Sp, dist = dist.Sp, group = group.Sp, name="Spathian"))
+
+anosimper <- lapply(anosim.simper.data, function(data){
+  #ANOSIM
+  anosim.analysis <- vegan::anosim(x = data[[2]],
+                                   grouping = as.factor(data[[3]]),
+                                   permutation=9999, distance=NULL, strata=NULL, parallel=NULL)
+  print(data[[4]])
+  print(anosim.analysis)
+  
+  #SIMPER
+  simper.analysis <- vegan::simper(t(data[[1]]), as.factor(data[[3]]), permutations = 9999)
+}
+)
+sapply(names(anosimper), function (x) write.csv2(as.data.frame(anosimper[[x]][[1]]), 
+                                                 file=paste0("SIMPER_data_", x, "_conodont.csv"),
+                                                 row.names = FALSE))
+
+anosimper.name <- lapply(anosimper, function(data){
+  for (i in 1:length(data)) {
+    data[[i]]$name <- strsplit(names(data), split = "_")
+  }
+  return(data)
+}
+  )
+
+
+simper.plot <- lapply(anosimper.name, function(data){
+  for (i in 1:length(data)) {
+    repartition <- cbind(as.data.frame(data[[i]]$average), 
+                         as.data.frame(data[[i]]$ava), 
+                         as.data.frame(data[[i]]$avb)) %>% 
+      rownames_to_column(var="name")
+    colnames(repartition) <- c("name", "average", data[[i]]$name[[i]][1], data[[i]]$name[[i]][2])
+    name.order <- as.factor(repartition[order(repartition$average, decreasing = T),c('name')])
+    df <- reshape2::melt(repartition[,c("name", data[[i]]$name[[i]][1], data[[i]]$name[[i]][2])], id.vars=1)
+    
+    simper.analysis.data <- full_join(
+      as.data.frame(cbind("order"=data[[i]]$ord, "cumsum"=data[[i]]$cusum)) %>% rownames_to_column(var="species"),
+      as.data.frame(cbind("contrib"=data[[i]]$average)) %>% rownames_to_column(var="species")
+    )
+    
+    
+    simper.profile.plot <-
+      ggplot(simper.analysis.data, 
+             aes(x=as.numeric(row.names(simper.analysis.data)), y=contrib))+
+      geom_point(color="grey50")+
+      geom_point(aes(y=cumsum/20),color="black")+
+      scale_y_continuous(name = "Contributive", breaks = seq(0,0.1,0.01), #expand=c(0,0),
+                         sec.axis = sec_axis(~.*20, name = "Cumulative", breaks=seq(0,1,0.1)))+
+      theme_bw()+
+      geom_text(data=simper.analysis.data[1:10,], 
+                aes(x=as.numeric(row.names(simper.analysis.data[1:10,])),y=cumsum/20,
+                    label=species,hjust=-0.1, fontface = "italic"),
+                size=2,color="black")+
+      theme(
+        legend.title=element_text(size=6),
+        legend.text=element_text(size=6),
+        axis.title=element_text(size=6),
+        axis.text=element_text(size=6),
+        axis.text.x = element_blank(),
+        axis.ticks.x = element_blank(),
+        panel.grid.major.x = element_blank(),
+        legend.position = "none")+
+      labs(x=NULL)
+    
+    simper.repartition.plot <-
+      ggplot(df,aes(x=factor(name, levels=name.order), y=value)) + 
+      geom_bar(aes(fill = variable),stat = "identity",position = "dodge")+
+      scale_fill_manual(values=c("#fde725ff","#414687ff"))+
+      theme_bw()+
+      theme(
+        legend.title=element_blank(),
+        legend.text=element_text(size=6),
+        legend.position = "none",#"bottom",#
+        axis.title.y=element_text(size=6),
+        axis.title.x=element_blank(),
+        axis.text=element_text(size=6),
+        axis.text.x = element_text(angle=75, hjust=1, face = "italic"))+
+      scale_y_continuous(breaks=seq(0,1,0.1),limits=c(0,1), expand=c(0,0))+
+      labs(y="Distribution (%)")
+    
+    g <- ggarrange(simper.profile.plot,simper.repartition.plot, 
+                   ncol=2, nrow=1, widths=c(1,3), heights = c(1,2))
+    print(g)
+    
+    ggsave(file=paste("SIMPER_conodont",names(data[i]),"_",data[[i]]$species[5],".svg"),
+           plot=g, width=170, height=50, units="mm")
+  }
+}
+)
+
+```
+
+
+### VI.h) DNCI
+
+```{r, echo=T, error=FALSE, warning=FALSE, message=FALSE, include=TRUE}
+#Two or three biocores per time interval
+DNCI.1 <- lapply(anosim.simper.data, function(data){
+  dnci.Di <- DNCImper:::DNCI.ses(x=as.data.frame(t(data[[1]])),
+                                 grouping=as.vector(data[[3]]),
+                                 id=data[[4]],
+                                 Nperm=1000,
+                                 count=FALSE,
+                                 #symmetrize=FALSE,
+                                 plotSIMPER=FALSE)
+    return(dnci.Di)
+})
+
+```
+
+```{r, fig.width=5, fig.height=5}
+DNCI.1.df <- as.data.frame(do.call(rbind, DNCI.1))#%>%mutate(type="pairwise")
+write.csv2(x=DNCI.1.df, file="DNCI_data_conodont.csv", row.names = FALSE)
+
+DNCI.multi.plot.1 <-
+ggplot(data=DNCI.1.df, mapping = aes(x=DNCI, y=factor(id, levels=c("Changhsingian","Griesbachian","Dienerian","Smithian","Spathian"))))+
+  geom_point(size=1)+
+  geom_errorbarh(aes(xmin=DNCI-S.DNCI, xmax=DNCI+S.DNCI),height=0,linewidth=0.5)+
+  theme_bw()+
+  # scale_x_continuous(limits=c(min.DNCI,max.DNCI))+
+  labs(x="DNCI", y="")
+DNCI.multi.plot.1
+ggsave(file="DNCI_conodont.svg", plot=DNCI.multi.plot.1, 
+       width=75, units="mm")
+
+```
+
