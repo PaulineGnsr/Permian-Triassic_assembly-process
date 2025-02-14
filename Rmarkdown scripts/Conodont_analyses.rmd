@@ -7,7 +7,7 @@ output: html_document
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
-knitr::opts_knit$set(root.dir="C:/Users/33677/Documents/NEW_WORK/THESE/Permian-Triassic_assembly process/Rmarkdown outputs")
+# knitr::opts_knit$set(root.dir="C:/Users/33677/Documents/NEW_WORK/THESE/Permian-Triassic assembly-process/Rmarkdown outputs")
 ```
 
 ## Introduction
@@ -47,7 +47,7 @@ library(DNCImper)
 ```
 
 ```{r}
-setwd("C:/Users/33677/Documents/NEW_WORK/THESE/Permian-Triassic_assembly process/DataBase conodonts")
+setwd("C:/Users/33677/Documents/NEW_WORK/THESE/Permian-Triassic assembly-process/DataBase conodonts")
 Occ.NT.2022 <- read.csv2("Occurence_Permian Triassic conodont_2022.csv",header = T, sep = ";",stringsAsFactors = TRUE)
 str(Occ.NT.2022)
 ```
