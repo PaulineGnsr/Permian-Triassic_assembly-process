@@ -69,6 +69,7 @@ Occ.NT.2022.clean <- Occ.NT.2022 %>%
            "Co_oezdemirae","E_bogschi","E_delicatula","E_gradata","E_nevadensis","E_praenevadensis","E_torta","E_transita","E_triassica", "Gg_tethydis","Hi_lobata",
            "Me_longidentata","Ng_mombergensis","Ns_dronovi","Ns_excelsus","Pc_multispinosa","Pc_tridentata",
            "Pr_geiseri","Pr_inclinatus","Pr_tricuspidatus","St_dobruskinae",
+           
            "Bo_spC_Orchard2007","Bo_spD_Leu2021","Bo_spE_Leu2021","Bo_spA_Leu2021","Bo_spB_Leu2021","Bo_spC_Leu2021","Bo_spA_Golding2021",
            "Ch_spA_Ha2021","Ch_spB_Ha2021","Cl_spB_Kozur2005","Cl_spC_Kozur2005","Cl_spB_Gliwa2020","Cl_spC_Gliwa2020",
            "Cl_spA_Hatleberg_and_Clark1984","Cl_spA_Sun2021","Cl_spB_Hatleberg_and_Clark1984","Cb_spA_Golding2021","Cb_spA_Leu2021",
@@ -111,19 +112,20 @@ data.paleocoord.off.PALEOMAP <- rgplates::reconstruct(data.coord, age=250, model
 #Plot paleocoordinates
 mapOff250 <- rgplates::reconstruct("coastlines", age=250, model="PALEOMAP")
 par(mai=c(0,0,0,0))
-svg(filename="paleomap_sections_raw.svg", width = 8)
+# svg(filename="paleomap_sections_raw.svg", width = 8)
 plot(mapOff250$geometry, border=NA, col="gray")
 points(data.paleocoord.off.PALEOMAP, cex=0.75, pch=16, col="darkgoldenrod")
-dev.off()
+# dev.off()
     
 ```
 
 ### II.b) Adjust the paleocoordinates
 
-Some paleocoordinates are wrong: all japonese and bulgarian sections.
-The japonese sections are all relocated at N0-145°E.
-The bulgarian sections are all relocated at N40-15°E.
-For details, please refer to Guenser et al. (in prep.) and Guenser's PhD thesis (2020).
+Some paleocoordinates are wrong: all japanese and bulgarian sections.
+The japanese sections are all relocated at 0°N-145°E.
+The bulgarian sections are all relocated at 40°N-15°E.
+The Timor-Leste sections are relocated at 35°S-90°E.
+For details, please refer to the literature cited by Guenser et al. (in prep.)
 
 
 ```{r, message=FALSE, warning=FALSE, fig.width=15, fig.height=10}
@@ -141,12 +143,15 @@ Paleocoord$OffPaleolat[which(Paleocoord$Section %in% japan$Section)] <- 0
 Paleocoord$OffPaleolong[which(Paleocoord$Section %in% c("Ajvadzikdere","Tranak"))] <- 40
 Paleocoord$OffPaleolat[which(Paleocoord$Section %in% c("Ajvadzikdere","Tranak"))] <- 15
 
+Paleocoord$OffPaleolong[which(Paleocoord$Section %in% c("Manatuto_loc5","Manatuto_loc6"))] <- 90
+Paleocoord$OffPaleolat[which(Paleocoord$Section %in% c("Manatuto_loc5","Manatuto_loc6"))] <- -35
+
 data.paleocoord.off.PALEOMAP.acc <- as.matrix(Paleocoord[,2:3])
 
-svg(filename="paleomap_sections_clean.svg", width = 8)
+# svg(filename="paleomap_sections_clean.svg", width = 8)
 plot(mapOff250$geometry, border=NA, col="gray")
 points(data.paleocoord.off.PALEOMAP.acc, cex=0.75, pch=16, col="darkgoldenrod")
-dev.off()
+# dev.off()
 
 Occ.NT.2022.clean.paleocoord <- dplyr::full_join(Paleocoord, Occ.NT.2022.clean)
 
@@ -200,7 +205,7 @@ Then, we calculate the mean paleocoordinates for each region.
 
 
 ```{r, message=FALSE, fig.width=9, fig.height=6}
-setwd("C:/Users/33677/Documents/NEW_WORK/THESE/Data_SuppInf")
+setwd("C:/Users/33677/Documents/NEW_WORK/THESE/Permian-Triassic assembly-process/Supplementary")
 Regions <- read.csv2("Table S2_Section_paleocoord_regions_2023-09.csv", sep=";", dec=",", header=TRUE, stringsAsFactors = TRUE)
 
 #Integrate regions to the DB
