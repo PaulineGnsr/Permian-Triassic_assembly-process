@@ -610,11 +610,11 @@ Di <- list.data.nos$Dienerian$Di[!rownames(list.data.nos$Dienerian$Di)%in%c("Nev
 group.Di <- t(data.frame("group"=c("N-Panthalassa","Tethys","Tethys","N-Panthalassa","Tethys","Tethys"),
                          row.names=rownames(Di)))
 
-Sm <- list.data.nos$Smithian$Sm[!rownames(list.data.nos$Smithian$Sm)%in%c("Ala","Jap","Cau","Afg","Vie","Pri","Mon"),]
+Sm <- list.data.nos$Smithian$Sm[!rownames(list.data.nos$Smithian$Sm)%in%c("Ala","Jpn","Cau","Afg","Vie","Pri","Mon"),]
 group.Sm <- t(data.frame("group"=c("South","N-Panthalassa","N-Panthalassa","South","South","South","South","N-Panthalassa","South","N-Panthalassa"),
                          row.names=rownames(Sm)))
 
-Sp <-  list.data.nos$Spathian$Sp[!rownames(list.data.nos$Spathian$Sp)%in%c("Sib","Jap","Vie","Qin","Pri","Yug"),]
+Sp <-  list.data.nos$Spathian$Sp[!rownames(list.data.nos$Spathian$Sp)%in%c("Sib","Jpn","Vie","Qin","Pri","Yug"),]
 group.Sp <- t(data.frame("group"=c("Equator","Equator","N-Panthalassa","N-Panthalassa","Equator","Equator","N-Panthalassa","S-Tethys","Equator","Equator","S-Tethys"),
                          row.names=rownames(Sp)))
 
