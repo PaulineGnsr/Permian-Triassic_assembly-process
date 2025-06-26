@@ -40,6 +40,7 @@ library(vegan)
 library(emstreeR)
 library(igraph)
 library("metagMisc")
+library(divDyn)
 
 # devtools::install_github("Corentin-Gibert-Paleontology/DNCImper")
 library(DNCImper)
@@ -94,6 +95,241 @@ Occ.NT.2022.clean <- Occ.NT.2022 %>%
            "St_sp","Sw_sp","Ts_sp","Ts_spp","V_sp"))%>%droplevels()
 
 ```
+
+## Some statistics for the data paper in PCI-Paleo
+### 1) (Paleo)mapping of sections
+
+```{r}
+Occ.NT.2022.coord <- Occ.NT.2022 %>% 
+  dplyr::select(Section,Longitude,Latitude)%>%
+  droplevels()%>%unique()%>%
+  tibble::remove_rownames()%>%tibble::column_to_rownames(var="Section")
+
+##Current mapping
+map_data <- 
+  ggplot(map_data("world"), aes(x=long, y=lat, group=group)) +
+  geom_polygon(data=map_data("world"), colour = "grey", fill="grey")+
+  theme_classic()+
+  geom_point(data=Occ.NT.2022.coord, 
+             aes(x=Longitude, y=Latitude, group=NULL), colour="darkgoldenrod")+
+  geom_point(data=ref, aes(x=x, y=y, group=NULL), shape=3, colour="red")
+
+setwd("C:/Users/33677/Documents/NEW_WORK/THESE/PCI/Figures")
+ggsave(filename="map_all_sections.svg", plot=map_data, device="svg",
+       units="in", width=8, height = 5)
+
+
+##Get paleocoordinates
+Occ.NT.2022.paleocoord.off.PALEOMAP <- rgplates::reconstruct(Occ.NT.2022.coord, age=250, model="PALEOMAP", plateperiod=FALSE)
+
+#Plot paleocoordinates
+mapOff250 <- rgplates::reconstruct("coastlines", age=250, model="PALEOMAP")
+par(mai=c(0,0,0,0))
+ref <- data.frame(x=c(-180,-90,0,90,180),
+                  y=c(-90,-45,0,45,90))
+
+setwd("C:/Users/33677/Documents/NEW_WORK/THESE/PCI/Figures")
+svg(filename="paleomap_all_sections.svg", width = 8)
+  plot(mapOff250$geometry, border=NA, col="grey")
+  points(Occ.NT.2022.paleocoord.off.PALEOMAP, cex=0.75, pch=16, col="darkgoldenrod")
+  points(ref,pch=3,col="red")
+dev.off()
+
+
+
+```
+
+### 2) Age of references
+
+```{r}
+Occ.NT.2022.ref <- Occ.NT.2022 %>% select(Ref_section, Age_paper) %>% unique() %>% arrange(Age_paper)
+
+setwd("C:/Users/33677/Documents/NEW_WORK/THESE/PCI/Figures")
+svg(filename="age_of.svg", width = 7, height = 4)
+par(mfrow=c(1,2))
+hist.ref.unique <- hist(Occ.NT.2022.ref$Age_paper, 
+                        #xlim=c(1965,2025), ylim=c(0,60), breaks=seq(1965,2025,5),
+                        main="Age of publications", xlab="Year of publication", ylab="Number of publications")
+hist.ref.occ <- hist(Occ.NT.2022$Age_paper, 
+                     #xlim=c(1965,2025), ylim=c(0,60), breaks=seq(1965,2025,5),
+                     main="Age of occurrences", xlab=NULL, ylab=NULL)
+dev.off()
+```
+
+### 3) Number of taxa names
+
+```{r}
+sp.orig <- unique(Occ.NT.2022$Species_in_paper) %>% droplevels()
+sp.curr.clean <- unique(Occ.NT.2022.clean$Gn_Species_current) %>% droplevels()
+
+length(sp.orig)
+length(sp.curr.clean)
+
+length(intersect(sp.orig, sp.curr.clean))
+
+```
+The figure XXX in the data paper was then built with Inkscape by drawing two nested circles representing 1) the raw number of species names found in publications (581) and 2) the number of species names currently used after cleaning the database (245).
+
+### 4) Diversity curves
+#### 4.a) Comparing PBDB data from different packages
+
+```{r}
+Occ.NT.2022.clean.SiB <- Occ.NT.2022.clean %>% 
+  select(Species_in_paper, Gn_Species_current, Stage, Sub_stage) %>%
+  unique() %>% droplevels()
+
+Occ.NT.2022.clean.SiB$Sub_stage <- as.character(Occ.NT.2022.clean.SiB$Sub_stage)
+Occ.NT.2022.clean.SiB$Sub_stage[which(Occ.NT.2022.clean.SiB$Stage=="Changhsingian")] <- "Changhsingian"
+Occ.NT.2022.clean.SiB$Sub_stage <- as.factor(Occ.NT.2022.clean.SiB$Sub_stage)
+
+SiB.clean <- Occ.NT.2022.clean.SiB %>% 
+  filter(Sub_stage %in% c("Changhsingian", "Griesbachian", "Dienerian", "Smithian", "Spathian")) %>%
+  droplevels()
+SiB.clean$Sub_stage <- factor(SiB.clean$Sub_stage, 
+                         levels = c("Changhsingian", "Griesbachian", "Dienerian", "Smithian", "Spathian"))
+
+n.sp.orig <- SiB.clean %>% 
+  select(!Gn_Species_current) %>% unique() %>%
+  group_by(Sub_stage) %>% summarise(ConoDB =n())
+
+n.sp.curr <- SiB.clean %>% 
+  select(!Species_in_paper) %>% unique() %>%
+  group_by(Sub_stage) %>% summarise(ConoDB =n())
+
+
+library(paleobioDB)
+dataC.paleobioDB <- paleobioDB::pbdb_occurrences(limit="all", base_name="Conodonta", interval=c("Changhsingian","Griesbachian","Dienerian","Smithian","Spathian"), show="classext")
+dataC.paleobioDB.clean <- dataC.paleobioDB %>% 
+  filter(oei %in% c("Changhsingian","Griesbachian","Dienerian","Smithian","Spathian") |
+           oli %in% c("Changhsingian","Griesbachian","Dienerian","Smithian","Spathian")) %>%
+  droplevels() %>%
+  select(tna,oei,oli) %>% droplevels() %>% unique()
+dataC.paleobioDB.clean$oei <- factor(dataC.paleobioDB.clean$oei, 
+                                     levels = c("Changhsingian", "Griesbachian", "Dienerian", "Smithian", "Spathian"))
+dataC.paleobioDB.clean$oli <- factor(dataC.paleobioDB.clean$oli, 
+                                     levels = c("NA", "Griesbachian", "Dienerian", "Smithian", "Spathian"))
+
+n.sp.paleobioDB.early <- dataC.paleobioDB.clean %>% group_by(oei) %>% summarise(Nombre =n())
+n.sp.paleobioDB.late <- dataC.paleobioDB.clean %>% group_by(oli) %>% summarise(Nombre =n())
+n.sp.paleobioDB <- full_join(n.sp.paleobioDB.early,n.sp.paleobioDB.late, by = c("oei"="oli")) %>%
+  mutate(Nombre.y = replace_na(Nombre.y,0),
+         paleobioDB=Nombre.x+Nombre.y) %>% filter(!is.na(paleobioDB))
+
+
+library(fossilbrush)
+dataC.fossilbrush <- fossilbrush:::get_pbdb(taxon = "Conodonta", interval = c(255, 245), wait=499, tscale = "GTS_2020")
+dataC.fossilbrush$early_interval <- as.factor(dataC.fossilbrush$early_interval)
+dataC.fossilbrush$late_interval <- as.factor(dataC.fossilbrush$late_interval)
+dataC.fossilbrush.clean <- dataC.fossilbrush %>% 
+  filter(early_interval %in% c("Changhsingian","Griesbachian","Dienerian","Smithian","Spathian") |
+           late_interval %in% c("Changhsingian","Griesbachian","Dienerian","Smithian","Spathian"),
+         accepted_rank=="species") %>%
+  droplevels() %>%
+  select(accepted_name,early_interval,late_interval) %>% unique()
+dataC.fossilbrush.clean$early_interval <- factor(dataC.fossilbrush.clean$early_interval, 
+                                                 levels = c("Changhsingian", "Griesbachian", "Dienerian", "Smithian", "Spathian"))
+dataC.fossilbrush.clean$late_interval <- factor(dataC.fossilbrush.clean$late_interval, 
+                                                 levels = c("Changhsingian", "Griesbachian", "Dienerian", "Smithian", "Spathian"))
+dataC.fossilbrush.clean.early <- dataC.fossilbrush.clean %>% group_by(early_interval) %>% summarise(Nombre =n())
+dataC.fossilbrush.clean.late <- dataC.fossilbrush.clean %>% group_by(late_interval) %>% summarise(Nombre =n())
+n.sp.fossilbrush <- full_join(dataC.fossilbrush.clean.early,dataC.fossilbrush.clean.late, by = c("early_interval"="late_interval")) %>%
+  mutate(fossilbrush=Nombre.x+Nombre.y)
+
+
+library(paleoDiv)
+dataC.paleoDiv <- paleoDiv::pdb(taxon="Conodonta", interval="all")
+dataC.paleoDiv$early_interval <- as.factor(dataC.paleoDiv$early_interval)
+dataC.paleoDiv$late_interval <- as.factor(dataC.paleoDiv$late_interval)
+dataC.paleoDiv.clean <- dataC.paleoDiv %>% 
+  filter(early_interval %in% c("Changhsingian","Griesbachian","Dienerian","Smithian","Spathian") |
+           late_interval %in% c("Changhsingian","Griesbachian","Dienerian","Smithian","Spathian"),
+         accepted_rank=="species") %>%
+  droplevels() %>%
+  select(accepted_name,early_interval,late_interval) %>% unique()
+dataC.paleoDiv.clean$early_interval <- factor(dataC.paleoDiv.clean$early_interval, 
+                                                 levels = c("Changhsingian", "Griesbachian", "Dienerian", "Smithian", "Spathian"))
+dataC.paleoDiv.clean$late_interval <- factor(dataC.paleoDiv.clean$late_interval, 
+                                                 levels = c("Changhsingian", "Griesbachian", "Dienerian", "Smithian", "Spathian"))
+dataC.paleoDiv.clean.early <- dataC.paleoDiv.clean %>% group_by(early_interval) %>% summarise(Nombre =n())
+dataC.paleoDiv.clean.late <- dataC.paleoDiv.clean %>% group_by(late_interval) %>% summarise(Nombre =n())
+n.sp.paleoDiv <- full_join(dataC.paleoDiv.clean.early, dataC.paleoDiv.clean.late, by = c("early_interval"="late_interval")) %>%
+    mutate(Nombre.y = replace_na(Nombre.y,0),
+         paleoDiv=Nombre.x+Nombre.y) %>% filter(!is.na(paleoDiv))
+
+
+data("stages")
+Low.Trias <- read.csv2("Low_Trias.csv", h=T, dec=",")
+stages <- rbind(stages, Low.Trias)
+
+divDyn::tsplot(stages, boxes=c("short","system"), shading= "short", boxes.col=c("col","systemCol"), 
+               xlim=which(stages$stage %in% c("Changhsingian", "Griesbachian","Dienerian","Smithian","Spathian")),
+               ylab="Sample in bin diversity", 
+               ylim=c(0,250), 
+               labels.args=list(cex=0.6))
+
+points(x=stages$mid[which(stages$stage %in% c("Changhsingian", "Griesbachian","Dienerian","Smithian","Spathian"))], 
+       y=n.sp.curr$ConoDB, col="black", pch=15)
+lines(x=stages$mid[which(stages$stage %in% c("Changhsingian", "Griesbachian","Dienerian","Smithian","Spathian"))], 
+       y=n.sp.curr$ConoDB,  pch = 10, col = "black", lty = 1)
+
+points(x=stages$mid[which(stages$stage %in% c("Changhsingian", "Griesbachian","Dienerian","Smithian","Spathian"))], 
+       y=n.sp.orig$ConoDB, col="grey70", pch=15)
+lines(x=stages$mid[which(stages$stage %in% c("Changhsingian", "Griesbachian","Dienerian","Smithian","Spathian"))], 
+       y=n.sp.orig$ConoDB,  pch = 10, col = "grey70", lty = 1)
+
+
+points(x=stages$mid[which(stages$stage %in% c("Changhsingian", "Griesbachian","Dienerian","Smithian","Spathian"))], 
+       y=n.sp.fossilbrush$fossilbrush, col="darkgoldenrod", pch=16)
+lines(x=stages$mid[which(stages$stage %in% c("Changhsingian", "Griesbachian","Dienerian","Smithian","Spathian"))], 
+       y=n.sp.fossilbrush$fossilbrush,  pch = 10, col = "darkgoldenrod", lty = 1)
+
+points(x=stages$mid[which(stages$stage %in% c("Changhsingian", "Griesbachian","Dienerian","Smithian","Spathian"))], 
+       y=n.sp.paleobioDB$paleobioDB, col="darkcyan", pch=17)
+lines(x=stages$mid[which(stages$stage %in% c("Changhsingian", "Griesbachian","Dienerian","Smithian","Spathian"))], 
+       y=n.sp.paleobioDB$paleobioDB,  pch = 10, col = "darkcyan", lty = 1)
+
+points(x=stages$mid[which(stages$stage %in% c("Changhsingian", "Griesbachian","Dienerian","Smithian","Spathian"))], 
+       y=n.sp.paleoDiv$paleoDiv, col="darkmagenta", pch=18)
+lines(x=stages$mid[which(stages$stage %in% c("Changhsingian", "Griesbachian","Dienerian","Smithian","Spathian"))], 
+       y=n.sp.paleoDiv$paleoDiv,  pch = 10, col = "darkmagenta", lty = 1)
+
+cols <- c("black", "grey70","darkgoldenrod","darkcyan","darkmagenta")
+point <- c(15,15,16,17,18)
+plotnames <-c("ConoDB current", "ConoDB original", "PBDB fossil brush", "PBDB paleobioDB", "PBDB paleoDiv")
+legend("topleft", inset=c(0.01, 0.01),
+       legend= plotnames, pch = point, bg="white", col=cols, lwd=1, lty=1)
+
+```
+#### 4.b) Simple comparison
+```{r}
+setwd("C:/Users/33677/Documents/NEW_WORK/THESE/PCI/Figures")
+svg(filename="Figure XXX_Div curves.svg", width = 7, height = 4)
+divDyn::tsplot(stages, boxes=c("short","system"), shading= "short", boxes.col=c("col","systemCol"), 
+               xlim=which(stages$stage %in% c("Changhsingian", "Griesbachian","Dienerian","Smithian","Spathian")),
+               ylab="Sample in bin diversity", 
+               ylim=c(0,105),
+               labels.args=list(cex=0.6))
+
+points(x=stages$mid[which(stages$stage %in% c("Changhsingian", "Griesbachian","Dienerian","Smithian","Spathian"))], 
+       y=n.sp.curr$ConoDB, col="black", pch=15)
+lines(x=stages$mid[which(stages$stage %in% c("Changhsingian", "Griesbachian","Dienerian","Smithian","Spathian"))], 
+       y=n.sp.curr$ConoDB,  pch = 10, col = "black", lty = 1)
+
+points(x=stages$mid[which(stages$stage %in% c("Changhsingian", "Griesbachian","Dienerian","Smithian","Spathian"))], 
+       y=n.sp.paleoDiv$paleoDiv, col="darkmagenta", pch=18)
+lines(x=stages$mid[which(stages$stage %in% c("Changhsingian", "Griesbachian","Dienerian","Smithian","Spathian"))], 
+       y=n.sp.paleoDiv$paleoDiv,  pch = 10, col = "darkmagenta", lty = 1)
+
+cols <- c("black","darkmagenta")
+point <- c(15,18)
+plotnames <-c("Present database", "PaleoBiology DataBase")
+legend("topleft", inset=c(0.01, 0.01),
+       legend= plotnames, pch = point, bg="white", col=cols, lwd=1, lty=1)
+dev.off()
+```
+
+
+
 
 ## II. From coordinates to paleocoordinates
 ### II.a) Paleocoordinates calculation
