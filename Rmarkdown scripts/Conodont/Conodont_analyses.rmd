@@ -50,8 +50,8 @@ library(DNCImper)
 ```
 
 ```{r}
-setwd("C:/Users/33677/Documents/NEW_WORK/THESE/Permian-Triassic assembly-process/DataBase conodonts")
-Occ.NT.2022 <- read.csv2("Occurence_Permian Triassic conodont_2022.csv",header = T, sep = ";",stringsAsFactors = TRUE)
+Occ.NT.2022 <- read.csv("https://raw.githubusercontent.com/PaulineGnsr/Permian-Triassic_assembly-process/refs/heads/main/DataBase%20conodonts/Occurence_Permian%20Triassic%20conodont_2022.csv",
+                        header = T, sep = ";", stringsAsFactors = TRUE)
 str(Occ.NT.2022)
 ```
 
@@ -175,7 +175,8 @@ The figure XXX in the data paper was then built with Inkscape by drawing two nes
 0: Get the timeline and modify a bit the ages.
 ```{r}
 data("stages")
-Low.Trias <- read.csv2("Low_Trias.csv", h=T, dec=",")
+Low.Trias <- read.csv2("https://raw.githubusercontent.com/PaulineGnsr/Permian-Triassic_assembly-process/refs/heads/main/Rmarkdown%20scripts/Conodont/Low_Trias.csv", 
+                       h=T, dec=",")
 stages <- rbind(stages, Low.Trias)
 
 stages[which(stages$stage=="Changhsingian"), 'top'] <- 252.018
@@ -315,7 +316,7 @@ legend("topleft", inset=c(0.01, 0.01),
 #### II.4.b) Simple comparison
 ```{r}
 # setwd("C:/Users/33677/Documents/NEW_WORK/THESE/Permian-Triassic assembly-process/Datapaper_PCI Paleo")
-# svg(filename="Figure 1_Diversity curves.svg", width = 7, height = 4)
+# svg(filename="Figure 1_Diversity curves_conodont.svg", width = 7, height = 4)
 divDyn::tsplot(stages, boxes=c("short","system"), shading= "short", boxes.col=c("col","systemCol"), 
                xlim=which(stages$stage %in% c("Changhsingian", "Griesbachian","Dienerian","Smithian","Spathian")),
                ylab="Sample in bin diversity", 
@@ -460,7 +461,10 @@ Regions <- read.csv2("Table S2_Section_paleocoord_regions_conodont.csv", sep=";"
 Regions2 <- Regions%>%select(Section,Region)
 Occ.NT.2022.clean.regions <- dplyr::full_join(Occ.NT.2022.clean.paleocoord.acc, Regions2)#%>%droplevels()
 rm(Regions2)
+```
 
+
+```{r, message=FALSE, fig.width=9, fig.height=6}
 #Map the sections, colored according to their region
 Section.coord <- Regions%>%select(Section,OffPaleolong,OffPaleolat)%>%tibble::column_to_rownames("Section")
 

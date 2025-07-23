@@ -44,21 +44,26 @@ library(DNCImper)
 ## I. Prepare the data
 
 ```{r, message=FALSE, warning=FALSE}
-setwd("C:/Users/33677/Documents/NEW_WORK/THESE/Permian-Triassic_assembly process/Dataset ammonoids")
-paleocoord <- read.csv2("ammo_paleocoord.csv", dec=",", header = TRUE, row.names = 1)
+paleocoord <- read.csv("https://raw.githubusercontent.com/PaulineGnsr/Permian-Triassic_assembly-process/refs/heads/main/Dataset%20ammonoids/ammo_paleocoord.csv", 
+                        dec=",", sep=";", header = TRUE, row.names = 1)
 paleocoord.cent <- paleocoord[,!names(paleocoord)=="Region_Neo"]
 paleocoord.cent$OffPaleolong[which(paleocoord.cent$OffPaleolong<25)] <- paleocoord.cent$OffPaleolong[which(paleocoord.cent$OffPaleolong<25)] + 360
 paleocoord.cent <- paleocoord.cent[order(paleocoord.cent$OffPaleolong),]
 
-data.changhsingien <- read.csv("ammo_Ch.csv", sep = ";", header = TRUE, row.names=1)
-data.grieshbachien <- read.csv("ammo_Gr.csv", sep = ";", header = TRUE, row.names=1)
-data.dienerien <- read.csv("ammo_Di.csv", sep = ";", header = TRUE, row.names=1)
-data.smithien <- read.csv("ammo_Sm.csv", sep = ";", header = TRUE, row.names=1)
-data.spathien <- read.csv("ammo_Sp.csv", sep = ";", header = TRUE, row.names=1)
+data.changhsingien <- read.csv("https://raw.githubusercontent.com/PaulineGnsr/Permian-Triassic_assembly-process/refs/heads/main/Dataset%20ammonoids/ammo_Ch.csv", 
+                               sep = ";", header = TRUE, row.names=1)
+data.griesbachien <- read.csv("https://raw.githubusercontent.com/PaulineGnsr/Permian-Triassic_assembly-process/refs/heads/main/Dataset%20ammonoids/ammo_Gr.csv", 
+                               sep = ";", header = TRUE, row.names=1)
+data.dienerien <- read.csv("https://raw.githubusercontent.com/PaulineGnsr/Permian-Triassic_assembly-process/refs/heads/main/Dataset%20ammonoids/ammo_Di.csv", 
+                           sep = ";", header = TRUE, row.names=1)
+data.smithien <- read.csv("https://raw.githubusercontent.com/PaulineGnsr/Permian-Triassic_assembly-process/refs/heads/main/Dataset%20ammonoids/ammo_Sm.csv", 
+                          sep = ";", header = TRUE, row.names=1)
+data.spathien <- read.csv("https://raw.githubusercontent.com/PaulineGnsr/Permian-Triassic_assembly-process/refs/heads/main/Dataset%20ammonoids/ammo_Sp.csv", 
+                          sep = ";", header = TRUE, row.names=1)
 
 l <- list( #grouper les tableaux d'occurrences en une liste pour tout faire en même temps
   Changhsingian = list(Ch=as.data.frame(t(data.changhsingien)), name = "Changhsingian"),
-  Griesbachian = list(Gr=as.data.frame(t(data.grieshbachien)), name = "Griesbachian"),
+  Griesbachian = list(Gr=as.data.frame(t(data.griesbachien)), name = "Griesbachian"),
   Dienerian = list(Di=as.data.frame(t(data.dienerien)), name = "Dienerian"),
   Smithian = list(Sm=as.data.frame(t(data.smithien)), name = "Smithian"),
   Spathian = list(Sp=as.data.frame(t(data.spathien)), name = "Spathian")
@@ -538,7 +543,7 @@ graph.BSN <- function(data){
   colors <- c(colfuncV(50), colfuncI(51))
   colors.weight <- colors[(E(data[[1]])$weight*100)+1]
   
-  svg(filename=paste("BSN_ammonoid ",data[[3]],".svg"), width = 10, height = 3)
+  # svg(filename=paste("BSN_ammonoid ",data[[3]],".svg"), width = 10, height = 3)
   par(mfrow=c(1,3))
   #simple representation in a circle
   layout.circle <- layout_in_circle(data[[1]])
@@ -565,18 +570,19 @@ graph.BSN <- function(data){
   #matching with paleocoord
   coord <- paleocoord.cent[rownames(paleocoord.cent)%in%V(data[[1]])$name,]
   coord <- coord[match(V(data[[1]])$name, rownames(coord)),]
+  print(coord)
 
-  lo.coord <- norm_coords(as.matrix(coord),
-                          xmin=min(coord$OffPaleolong), xmax=max(coord$OffPaleolong),
-                          ymin=min(coord$OffPaleolat), ymax=max(coord$OffPaleolat))
-  plot.palgeo <-
-    plot.igraph(data[[1]], rescale=F, layout=lo.coord, main="BSN vs paleogeography",
-                xlim = c(0, 381),
-                ylim = c(-90, 90),
-                edge.color=colors.weight,
-                vertex.size=5, vertex.color="black", vertex.frame.color=NA,
-                vertex.label.color="black")
-  dev.off()
+  # lo.coord <- norm_coords(as.matrix(coord),
+  #                         xmin=min(coord$OffPaleolong), xmax=max(coord$OffPaleolong),
+  #                         ymin=min(coord$OffPaleolat), ymax=max(coord$OffPaleolat))
+  # plot.palgeo <-
+  #   plot.igraph(data[[1]], rescale=F, layout=lo.coord, main="BSN vs paleogeography",
+  #               xlim = c(0, 381),
+  #               ylim = c(-90, 90),
+  #               edge.color=colors.weight,
+  #               vertex.size=5, vertex.color="black", vertex.frame.color=NA,
+  #               vertex.label.color="black")
+  # dev.off()
 
 }
 
