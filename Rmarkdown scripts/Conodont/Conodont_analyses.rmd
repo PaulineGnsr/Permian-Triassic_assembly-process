@@ -115,7 +115,6 @@ map_data <-
   geom_point(data=Occ.NT.2022.coord, 
              aes(x=Longitude, y=Latitude, group=NULL), colour="darkgoldenrod")
 
-# setwd("C:/Users/33677/Documents/NEW_WORK/THESE/PCI/Figures")
 # ggsave(filename="Figure 2A_map_all_sections_conodont.svg", plot=map_data, device="svg",
 #        units="in", width=8, height = 5)
 ```
@@ -129,7 +128,6 @@ Occ.NT.2022.paleocoord.off.PALEOMAP <- rgplates::reconstruct(Occ.NT.2022.coord, 
 mapOff250 <- rgplates::reconstruct("coastlines", age=250, model="PALEOMAP")
 par(mai=c(0,0,0,0))
 
-# setwd("C:/Users/33677/Documents/NEW_WORK/THESE/PCI/Figures")
 # svg(filename="Figure 2B_paleomap_all_sections_conodont.svg", width = 8)
   plot(mapOff250$geometry, border=NA, col="grey")
   points(Occ.NT.2022.paleocoord.off.PALEOMAP, cex=0.75, pch=16, col="darkgoldenrod")
@@ -144,7 +142,6 @@ par(mai=c(0,0,0,0))
 ```{r}
 Occ.NT.2022.ref <- Occ.NT.2022 %>% select(Ref_section, Age_paper) %>% unique() %>% arrange(Age_paper)
 
-# setwd("C:/Users/33677/Documents/NEW_WORK/THESE/PCI/Figures")
 # svg(filename="Figure 3_reference age.svg", width = 7, height = 4)
 par(mfrow=c(1,2))
 hist.ref.unique <- hist(Occ.NT.2022.ref$Age_paper, 
@@ -315,7 +312,6 @@ legend("topleft", inset=c(0.01, 0.01),
 
 #### II.4.b) Simple comparison
 ```{r}
-# setwd("C:/Users/33677/Documents/NEW_WORK/THESE/Permian-Triassic assembly-process/Datapaper_PCI Paleo")
 # svg(filename="Figure 1_Diversity curves_conodont.svg", width = 7, height = 4)
 divDyn::tsplot(stages, boxes=c("short","system"), shading= "short", boxes.col=c("col","systemCol"), 
                xlim=which(stages$stage %in% c("Changhsingian", "Griesbachian","Dienerian","Smithian","Spathian")),
@@ -454,8 +450,8 @@ Then, we calculate the mean paleocoordinates for each region.
 
 
 ```{r, message=FALSE, fig.width=9, fig.height=6}
-setwd("C:/Users/33677/Documents/NEW_WORK/THESE/Permian-Triassic assembly-process/Supplementary")
-Regions <- read.csv2("Table S2_Section_paleocoord_regions_conodont.csv", sep=";", dec=",", header=TRUE, stringsAsFactors = TRUE)
+Regions <- read.csv2("https://raw.githubusercontent.com/PaulineGnsr/Permian-Triassic_assembly-process/refs/heads/main/Supplementary/Table%20S2_Section_paleocoord_regions_conodont.csv", 
+                     sep=";", dec=",", header=TRUE, stringsAsFactors = TRUE)
 
 #Integrate regions to the DB
 Regions2 <- Regions%>%select(Section,Region)
